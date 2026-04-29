@@ -38,24 +38,24 @@ class TaskController extends Controller
      */
     public function store(Request $request)
     {
-        //
-        $request->validate([
-            'title' => 'required|string|max:25' ,
-            'description' => 'nullable|string' , 
-            'category_id' => 'required|exists:categories,id' ,
-            'due_date' => 'nullable|date' ,
-            ]) ;
-
+        $data = $request->validate([
+            'title'       => 'required|string|max:25',
+            'description' => 'nullable|string',
+            'category_id' => 'required|exists:categories,id',
+            'status'      => 'nullable|in:todo,in_progress,done',
+            'due_date'    => 'nullable|date',
+        ]);
 
         Task::create([
-            'title' => $request->title,
-            'description' => $request->description,
-            'category_id' => $request->category_id,
-            'due_date' => $request->due_date,
-            'user_id' => auth()->id(),
-        ]); 
+            'title'       => $data['title'],
+            'description' => $data['description'] ?? null,
+            'category_id' => $data['category_id'],
+            'status'      => $data['status'] ?? 'todo',
+            'due_date'    => $data['due_date'] ?? null,
+            'user_id'     => auth()->id(),
+        ]);
 
-        return redirect()->route('tasks.index')->with('success' , 'Task created successfully');
+        return redirect()->route('tasks.index')->with('success', 'Tâche créée avec succès');
     }
 
     
@@ -85,9 +85,9 @@ class TaskController extends Controller
 
         $task = Task::findOrFail($id);
 
-        if($task->user_id !== Auth::id()){
+        /*if($task->user_id !== Auth::id()){
             abort(403);
-        }
+        }*/
 
         $categories = Category::all();
 
@@ -100,26 +100,24 @@ class TaskController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
-
         $task = Task::findOrFail($id);
-        
-        if($task->user_id !== Auth::id()){
+
+        /*if ($task->user_id !== Auth::id()) {
             abort(403);
-        }
+        }*/
 
-        $request->validate([
-            'title' => 'required|string|max:25' ,
-            'description' => 'nullable|string' , 
-            'category_id' => 'required|exists:categories,id' ,
-            'due_date' => 'nullable|date' ,
-            ]) ;
-
-        $task->update([
-            $request->all()
+            
+        $data = $request->validate([
+            'title'       => 'required|string|max:25',
+            'description' => 'nullable|string',
+            'category_id' => 'required|exists:categories,id',
+            'status'      => 'nullable|in:todo,in_progress,done',
+            'due_date'    => 'nullable|date',
         ]);
 
-        return redirect()->route('tasks.index')->with('success' , 'Task updated successfully');
+        $task->update($data);
+
+        return redirect()->route('tasks.index')->with('success', 'Tâche mise à jour avec succès');
     }
 
     /**
