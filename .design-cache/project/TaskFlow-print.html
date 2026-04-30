@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TaskFlow — Fresh Mint UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#F0FDF4;color:#064E3B;-webkit-font-smoothing:antialiased}
+:root{
+  --emerald:#10B981;--teal:#14B8A6;--violet:#A855F7;--mint:#6EE7B7;
+  --bg:#F0FDF4;--card:#FFFFFF;--border:#D1FAE5;
+  --text:#064E3B;--text2:#6B7280;--text3:#9CA3AF;
+  --todo-bg:#E0F2FE;--todo-color:#0EA5E9;
+  --inprogress-bg:#FEF3C7;--inprogress-color:#F59E0B;
+  --done-bg:#D1FAE5;--done-color:#10B981;
+  --late-bg:#FEE2E2;--late-color:#EF4444;
+  --grad:linear-gradient(135deg,#10B981,#14B8A6);
+  --grad-accent:linear-gradient(135deg,#A855F7,#C084FC);
+  --shadow:0 4px 20px rgba(16,185,129,0.08),0 1px 4px rgba(16,185,129,0.06);
+  --shadow-hover:0 8px 32px rgba(16,185,129,0.18),0 2px 8px rgba(16,185,129,0.1);
+  --radius:16px;
+}
+input,textarea,select{font-family:'Inter',sans-serif}
+button{cursor:pointer;font-family:'Inter',sans-serif}
+.screen-label{
+  display:flex;align-items:center;gap:12px;padding:32px 0 16px;
+  font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
+  color:#9CA3AF;user-select:none;
+}
+.screen-label::before,.screen-label::after{content:'';flex:1;height:1px;background:#D1FAE5}
+.screen-sep{height:40px}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.fade-in{animation:fadeInUp .3s ease both}
+
+@media print {
+  *,-webkit-print-color-adjust{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  @page{size:1440px 900px;margin:0}
+  body{background:#F0FDF4}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+
+  /* Page breaks — each screen on its own page */
+  .print-page{break-before:page;break-inside:avoid}
+  .print-page:first-child{break-before:auto}
+  .screen-sep{display:none!important}
+  .screen-label{break-before:avoid;break-after:avoid;padding:12px 0 8px;font-size:10px}
+
+  /* Showcase outer wrapper — let it flow */
+  .showcase-wrap{padding:0!important}
+  .showcase-intro{padding:32px 40px 16px!important}
+
+  /* Fix AppShell: remove clipping so full content renders */
+  .app-wrap{height:auto!important;overflow:visible!important;border-radius:0!important;
+    box-shadow:none!important;border:none!important}
+  .app-wrap>div{height:auto!important;overflow:visible!important}
+  .app-wrap aside{height:auto!important;min-height:600px}
+  .app-wrap .app-main{flex:1;overflow:visible!important;height:auto!important}
+  .app-wrap main{overflow:visible!important;height:auto!important}
+
+  /* Auth screens — reset full-page height to card-only */
+  .auth-wrap{min-height:0!important;padding:32px 20px!important}
+
+  /* Modal preview containers */
+  .modal-wrap{height:auto!important;min-height:500px;border-radius:0!important;
+    box-shadow:none!important;border:none!important}
+
+  /* Remove interactive chrome from print */
+  button[title="Modifier"],button[title="Supprimer"]{display:none}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+// ── TOKENS ──
+const C = {
+  emerald:'#10B981',teal:'#14B8A6',violet:'#A855F7',mint:'#6EE7B7',
+  bg:'#F0FDF4',card:'#FFFFFF',border:'#D1FAE5',
+  text:'#064E3B',text2:'#6B7280',text3:'#9CA3AF',
+  todoBg:'#E0F2FE',todoColor:'#0EA5E9',
+  inBg:'#FEF3C7',inColor:'#F59E0B',
+  doneBg:'#D1FAE5',doneColor:'#10B981',
+  lateBg:'#FEE2E2',lateColor:'#EF4444',
+  pinkBg:'#FCE7F3',pink:'#F472B6',
+  cyanBg:'#CFFAFE',cyan:'#06B6D4',
+  violetBg:'#F3E8FF',
+  roseBg:'#FFE4E6',rose:'#F43F5E',
+};
+const GRAD = 'linear-gradient(135deg,#10B981,#14B8A6)';
+const GRAD_ACCENT = 'linear-gradient(135deg,#A855F7,#C084FC)';
+const SHADOW = '0 4px 20px rgba(16,185,129,0.10),0 1px 4px rgba(16,185,129,0.06)';
+const SHADOW_HOVER = '0 8px 32px rgba(16,185,129,0.20),0 2px 8px rgba(16,185,129,0.12)';
+const R = '16px';
+
+const CATS = {
+  'Travail':   {bg:'#CCFBF1',color:'#14B8A6'},
+  'Personnel': {bg:'#FCE7F3',color:'#F472B6'},
+  'Urgent':    {bg:'#FFE4E6',color:'#F43F5E'},
+  'Idées':     {bg:'#CFFAFE',color:'#06B6D4'},
+  'Apprentissage':{bg:'#F3E8FF',color:'#A855F7'},
+};
+
+const STATUS = {
+  'À faire':  {bg:C.todoBg,color:C.todoColor,label:'À faire'},
+  'En cours': {bg:C.inBg,  color:C.inColor,  label:'En cours'},
+  'Terminé':  {bg:C.doneBg,color:C.doneColor, label:'Terminé'},
+  'En retard':{bg:C.lateBg,color:C.lateColor, label:'En retard'},
+};
+
+const INITIAL_TASKS = [
+  {id:1,title:'Préparer la présentation Q2',desc:"Slides pour le board meeting du vendredi. Inclure les métriques de croissance et les projections annuelles.",cat:'Travail',status:'En cours',due:'2026-04-28',created:'2026-04-15'},
+  {id:2,title:'Réviser le contrat fournisseur',desc:"Analyser les clauses de renouvellement et négocier les tarifs avec l'équipe juridique.",cat:'Urgent',status:'En retard',due:'2026-04-20',created:'2026-04-10'},
+  {id:3,title:'Formation React avancé',desc:"Suivre le module sur les hooks personnalisés et les patterns de performance sur Udemy.",cat:'Apprentissage',status:'À faire',due:'2026-05-10',created:'2026-04-18'},
+  {id:4,title:'Débrief sprint 14',desc:"Réunion rétrospective avec l'équipe produit. Identifier les points d'amélioration et célébrer les succès.",cat:'Travail',status:'Terminé',due:'2026-04-22',created:'2026-04-08'},
+  {id:5,title:'Réserver billets conférence UX',desc:"Paris Design Week — enregistrer avant la date limite pour le tarif early bird.",cat:'Personnel',status:'À faire',due:'2026-05-05',created:'2026-04-20'},
+  {id:6,title:'Rédiger les user stories',desc:"Epic onboarding V2 — décomposer en stories INVEST et estimer la vélocité.",cat:'Idées',status:'En cours',due:'2026-04-30',created:'2026-04-17'},
+  {id:7,title:'Mise à jour documentation API',desc:"Documenter les nouveaux endpoints REST et mettre à jour Swagger avec les exemples de réponses.",cat:'Travail',status:'À faire',due:'2026-05-02',created:'2026-04-21'},
+];
+
+// ── SHARED COMPONENTS ──
+const Logo = ({size=28}) => (
+  <span style={{fontSize:size,fontWeight:800,background:GRAD,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',letterSpacing:'-0.03em'}}>
+    TaskFlow
+  </span>
+);
+
+const Btn = ({children,variant='primary',onClick,type='button',style={},...p}) => {
+  const [hov,setHov]=useState(false);
+  const base={
+    display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,
+    border:'none',borderRadius:12,fontWeight:600,fontSize:14,cursor:'pointer',
+    transition:'all .2s ease',outline:'none',
+  };
+  const variants={
+    primary:{background:GRAD,color:'#fff',padding:'12px 24px',
+      boxShadow:hov?'0 0 24px rgba(16,185,129,0.45)':'0 0 12px rgba(16,185,129,0.25)',
+      transform:hov?'translateY(-1px)':'none'},
+    accent:{background:GRAD_ACCENT,color:'#fff',padding:'12px 24px',
+      boxShadow:hov?'0 0 24px rgba(168,85,247,0.4)':'0 0 10px rgba(168,85,247,0.2)',
+      transform:hov?'translateY(-1px)':'none'},
+    ghost:{background:hov?'#F3F4F6':'transparent',color:C.text2,padding:'12px 24px',
+      border:`1.5px solid #E5E7EB`},
+    danger:{background:hov?'#DC2626':'#EF4444',color:'#fff',padding:'12px 24px',
+      transform:hov?'translateY(-1px)':'none'},
+    outline:{background:'transparent',color:C.emerald,padding:'12px 24px',
+      border:`1.5px solid ${C.emerald}`},
+  };
+  return <button type={type} style={{...base,...variants[variant],...style}}
+    onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+    onClick={onClick} {...p}>{children}</button>;
+};
+
+const Input = ({label,type='text',value,onChange,placeholder,icon,...p}) => (
+  <div style={{display:'flex',flexDirection:'column',gap:6}}>
+    {label && <label style={{fontSize:13,fontWeight:600,color:C.text}}>{label}</label>}
+    <div style={{position:'relative'}}>
+      {icon && <span style={{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',color:C.text3,fontSize:16}}>{icon}</span>}
+      <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+        style={{width:'100%',padding:icon?'12px 14px 12px 42px':'12px 14px',border:`1.5px solid ${C.border}`,
+          borderRadius:12,fontSize:14,color:C.text,background:'#fff',outline:'none',
+          transition:'border-color .2s',fontFamily:'Inter',...p.style}}
+        onFocus={e=>e.target.style.borderColor=C.emerald}
+        onBlur={e=>e.target.style.borderColor=C.border}
+        {...p}/>
+    </div>
+  </div>
+);
+
+const Badge = ({status}) => {
+  const s=STATUS[status]||STATUS['À faire'];
+  return <span style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',
+    borderRadius:999,fontSize:11,fontWeight:700,background:s.bg,color:s.color,whiteSpace:'nowrap'}}>
+    <span style={{width:6,height:6,borderRadius:'50%',background:s.color,display:'inline-block'}}></span>
+    {s.label}
+  </span>;
+};
+
+const CatBadge = ({cat}) => {
+  const c=CATS[cat]||CATS['Travail'];
+  return <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 8px',
+    borderRadius:999,fontSize:11,fontWeight:600,background:c.bg,color:c.color}}>
+    {cat}
+  </span>;
+};
+
+// ── ICONS (inline SVG) ──
+const Icon = ({name,size=18,color='currentColor'}) => {
+  const icons={
+    home:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+    list:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+    grid:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
+    bar:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    settings:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>,
+    bell:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>,
+    search:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+    plus:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+    edit:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+    trash:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>,
+    calendar:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    check:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+    logout:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+    eye:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+    eyeoff:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
+    alert:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+    filter:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+    arrowup:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>,
+    x:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+    user:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    mail:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+    lock:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>,
+    trend:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  };
+  return icons[name]||<span>{name}</span>;
+};
+
+// ── SCREEN LABEL ──
+const ScreenLabel = ({label}) => (
+  <div className="screen-label">{label}</div>
+);
+
+// ── AUTH LAYOUT ──
+const AuthLayout = ({children}) => (
+  <div className="auth-wrap" style={{minHeight:'100vh',background:'linear-gradient(160deg,#ECFDF5 0%,#F0FDF4 40%,#CCFBF1 100%)',
+    display:'flex',alignItems:'center',justifyContent:'center',padding:'40px 20px',position:'relative',overflow:'hidden'}}>
+    {/* blobs */}
+    <div style={{position:'absolute',top:-80,right:-80,width:400,height:400,borderRadius:'50%',
+      background:'radial-gradient(circle,rgba(16,185,129,0.12),transparent 70%)'}}/>
+    <div style={{position:'absolute',bottom:-60,left:-60,width:300,height:300,borderRadius:'50%',
+      background:'radial-gradient(circle,rgba(20,184,166,0.10),transparent 70%)'}}/>
+    <div style={{position:'absolute',top:'40%',left:'10%',width:200,height:200,borderRadius:'50%',
+      background:'radial-gradient(circle,rgba(168,85,247,0.07),transparent 70%)'}}/>
+    <div className="fade-in" style={{width:'100%',maxWidth:460,background:'#fff',borderRadius:24,
+      padding:48,boxShadow:'0 24px 80px rgba(16,185,129,0.12),0 4px 16px rgba(16,185,129,0.08)',
+      position:'relative',zIndex:1}}>
+      {children}
+    </div>
+  </div>
+);
+
+// ══════════════════════════════
+// SCREEN 1: REGISTER
+// ══════════════════════════════
+const RegisterScreen = ({onNavigate}) => {
+  const [form,setForm]=useState({name:'',email:'',password:'',confirm:''});
+  const [showPass,setShowPass]=useState(false);
+  const set=(k)=>(e)=>setForm(f=>({...f,[k]:e.target.value}));
+  return (
+    <AuthLayout>
+      <div style={{textAlign:'center',marginBottom:32}}>
+        <Logo size={32}/>
+        <div style={{marginTop:4,fontSize:12,color:C.text3,letterSpacing:'0.06em',fontWeight:500}}>GÉREZ. ACCOMPLISSEZ. PROGRESSEZ.</div>
+      </div>
+      <div style={{marginBottom:28}}>
+        <h1 style={{fontSize:26,fontWeight:800,color:C.text,marginBottom:4}}>Créez votre compte</h1>
+        <p style={{fontSize:14,color:C.text2}}>Commencez à organiser vos tâches dès aujourd'hui 🌿</p>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:16}}>
+        <Input label="Nom complet" value={form.name} onChange={set('name')} placeholder="Sarah Martin" icon={<Icon name="user" size={15} color={C.text3}/>}/>
+        <Input label="Adresse email" type="email" value={form.email} onChange={set('email')} placeholder="sarah@startup.fr" icon={<Icon name="mail" size={15} color={C.text3}/>}/>
+        <div>
+          <label style={{fontSize:13,fontWeight:600,color:C.text,display:'block',marginBottom:6}}>Mot de passe</label>
+          <div style={{position:'relative'}}>
+            <span style={{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',color:C.text3}}><Icon name="lock" size={15} color={C.text3}/></span>
+            <input type={showPass?'text':'password'} value={form.password} onChange={set('password')} placeholder="Minimum 8 caractères"
+              style={{width:'100%',padding:'12px 44px 12px 42px',border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:14,color:C.text,outline:'none',fontFamily:'Inter'}}
+              onFocus={e=>e.target.style.borderColor=C.emerald} onBlur={e=>e.target.style.borderColor=C.border}/>
+            <button onClick={()=>setShowPass(v=>!v)} style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:C.text3}}>
+              <Icon name={showPass?'eyeoff':'eye'} size={16} color={C.text3}/>
+            </button>
+          </div>
+        </div>
+        <Input label="Confirmer le mot de passe" type="password" value={form.confirm} onChange={set('confirm')} placeholder="Répétez le mot de passe" icon={<Icon name="lock" size={15} color={C.text3}/>}/>
+        <div style={{marginTop:4}}>
+          <Btn variant="primary" style={{width:'100%',padding:'14px',fontSize:15}} onClick={()=>onNavigate('login')}>
+            S'inscrire
+          </Btn>
+        </div>
+        <p style={{textAlign:'center',fontSize:13,color:C.text3}}>
+          Déjà un compte ?{' '}
+          <button onClick={()=>onNavigate('login')} style={{background:'none',border:'none',color:C.emerald,fontWeight:600,cursor:'pointer',fontSize:13}}>
+            Se connecter
+          </button>
+        </p>
+      </div>
+      <div style={{marginTop:24,padding:'16px',background:C.bg,borderRadius:12,border:`1.5px solid ${C.border}`}}>
+        <div style={{fontSize:12,color:C.text2,display:'flex',alignItems:'center',gap:8}}>
+          <Icon name="check" size={14} color={C.emerald}/>
+          <span>Vos données sont <strong>100% sécurisées</strong> et chiffrées</span>
+        </div>
+      </div>
+    </AuthLayout>
+  );
+};
+
+// ══════════════════════════════
+// SCREEN 2: LOGIN
+// ══════════════════════════════
+const LoginScreen = ({onNavigate}) => {
+  const [form,setForm]=useState({email:'sarah.martin@startup.fr',password:'•••••••••'});
+  const [remember,setRemember]=useState(true);
+  const [showPass,setShowPass]=useState(false);
+  const set=(k)=>(e)=>setForm(f=>({...f,[k]:e.target.value}));
+  return (
+    <AuthLayout>
+      <div style={{textAlign:'center',marginBottom:32}}><Logo size={32}/></div>
+      <div style={{marginBottom:28}}>
+        <h1 style={{fontSize:26,fontWeight:800,color:C.text,marginBottom:4}}>Bon retour 👋</h1>
+        <p style={{fontSize:14,color:C.text2}}>Content de vous revoir ! Connectez-vous à votre espace.</p>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:16}}>
+        <Input label="Adresse email" type="email" value={form.email} onChange={set('email')} placeholder="sarah@startup.fr" icon={<Icon name="mail" size={15} color={C.text3}/>}/>
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+            <label style={{fontSize:13,fontWeight:600,color:C.text}}>Mot de passe</label>
+            <button style={{background:'none',border:'none',color:C.emerald,fontSize:12,fontWeight:500,cursor:'pointer'}}>Mot de passe oublié ?</button>
+          </div>
+          <div style={{position:'relative'}}>
+            <span style={{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',color:C.text3}}><Icon name="lock" size={15} color={C.text3}/></span>
+            <input type={showPass?'text':'password'} value={form.password} onChange={set('password')}
+              style={{width:'100%',padding:'12px 44px 12px 42px',border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:14,color:C.text,outline:'none',fontFamily:'Inter'}}
+              onFocus={e=>e.target.style.borderColor=C.emerald} onBlur={e=>e.target.style.borderColor=C.border}/>
+            <button onClick={()=>setShowPass(v=>!v)} style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer'}}>
+              <Icon name={showPass?'eyeoff':'eye'} size={16} color={C.text3}/>
+            </button>
+          </div>
+        </div>
+        <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
+          <div onClick={()=>setRemember(v=>!v)} style={{width:20,height:20,borderRadius:6,border:`2px solid ${remember?C.emerald:C.border}`,background:remember?C.emerald:'#fff',
+            display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s',flexShrink:0}}>
+            {remember&&<Icon name="check" size={11} color="#fff"/>}
+          </div>
+          <span style={{fontSize:13,color:C.text2}}>Se souvenir de moi</span>
+        </label>
+        <div style={{marginTop:4}}>
+          <Btn variant="primary" style={{width:'100%',padding:'14px',fontSize:15}} onClick={()=>onNavigate('dashboard')}>
+            Se connecter
+          </Btn>
+        </div>
+        <p style={{textAlign:'center',fontSize:13,color:C.text3}}>
+          Pas encore de compte ?{' '}
+          <button onClick={()=>onNavigate('register')} style={{background:'none',border:'none',color:C.emerald,fontWeight:600,cursor:'pointer',fontSize:13}}>
+            S'inscrire gratuitement
+          </button>
+        </p>
+      </div>
+    </AuthLayout>
+  );
+};
+
+// ══════════════════════════════
+// APP SHELL (sidebar + topbar)
+// ══════════════════════════════
+const AppShell = ({children,activePage,onNavigate,onOpenTask}) => {
+  const navItems=[
+    {id:'dashboard',label:'Dashboard',icon:'home'},
+    {id:'tasks',label:'Mes tâches',icon:'list'},
+    {id:'categories',label:'Catégories',icon:'grid'},
+    {id:'stats',label:'Statistiques',icon:'bar'},
+    {id:'settings',label:'Paramètres',icon:'settings'},
+  ];
+  return (
+    <div className="app-main" style={{display:'flex',height:'100vh',background:C.bg,overflow:'hidden'}}>
+      {/* Sidebar */}
+      <aside style={{width:240,background:'#fff',borderRight:`1.5px solid ${C.border}`,display:'flex',flexDirection:'column',flexShrink:0}}>
+        <div style={{padding:'28px 20px 20px'}}>
+          <Logo size={24}/>
+          <div style={{fontSize:10,color:C.text3,marginTop:2,letterSpacing:'0.08em'}}>WORKSPACE</div>
+        </div>
+        <nav style={{flex:1,padding:'0 12px',display:'flex',flexDirection:'column',gap:4}}>
+          {navItems.map(item=>{
+            const active=activePage===item.id;
+            return (
+              <button key={item.id} onClick={()=>onNavigate(item.id)}
+                style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',borderRadius:12,border:'none',cursor:'pointer',
+                  background:active?C.doneBg:'transparent',color:active?C.emerald:C.text2,
+                  fontWeight:active?600:500,fontSize:14,transition:'all .15s',textAlign:'left',width:'100%'}}>
+                <Icon name={item.icon} size={17} color={active?C.emerald:C.text3}/>
+                {item.label}
+                {item.id==='tasks'&&<span style={{marginLeft:'auto',background:C.emerald,color:'#fff',borderRadius:999,fontSize:10,fontWeight:700,padding:'1px 7px'}}>7</span>}
+              </button>
+            );
+          })}
+        </nav>
+        {/* User */}
+        <div style={{padding:'16px',borderTop:`1.5px solid ${C.border}`}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+            <div style={{width:38,height:38,borderRadius:'50%',background:GRAD,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:14,flexShrink:0}}>S</div>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:C.text}}>Sarah Martin</div>
+              <div style={{fontSize:11,color:C.text3}}>Product Designer</div>
+            </div>
+          </div>
+          <button onClick={()=>onNavigate('login')} style={{display:'flex',alignItems:'center',gap:8,background:'none',border:`1.5px solid #E5E7EB`,borderRadius:10,padding:'8px 12px',cursor:'pointer',color:C.text2,fontSize:12,fontWeight:500,width:'100%'}}>
+            <Icon name="logout" size={14} color={C.text3}/> Déconnexion
+          </button>
+        </div>
+      </aside>
+      {/* Main */}
+      <div className="app-main" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        {/* Topbar */}
+        <header style={{background:'#fff',borderBottom:`1.5px solid ${C.border}`,padding:'0 28px',height:64,display:'flex',alignItems:'center',gap:16,flexShrink:0}}>
+          <div style={{flex:1,position:'relative'}}>
+            <span style={{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)'}}><Icon name="search" size={16} color={C.text3}/></span>
+            <input placeholder="Rechercher une tâche..." style={{width:'100%',maxWidth:360,padding:'9px 14px 9px 42px',border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:13,color:C.text,outline:'none',background:C.bg,fontFamily:'Inter'}}
+              onFocus={e=>e.target.style.borderColor=C.emerald} onBlur={e=>e.target.style.borderColor=C.border}/>
+          </div>
+          <div style={{position:'relative',cursor:'pointer'}}>
+            <Icon name="bell" size={20} color={C.text2}/>
+            <span style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'#EF4444',color:'#fff',fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>3</span>
+          </div>
+          <div style={{width:36,height:36,borderRadius:'50%',background:GRAD,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:14,cursor:'pointer'}}>S</div>
+        </header>
+        {/* Content */}
+        <main style={{flex:1,overflowY:'auto',padding:'32px 32px'}}>
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════
+// SCREEN 3: DASHBOARD
+// ══════════════════════════════
+const DashboardScreen = ({tasks,onNavigate,onNewTask}) => {
+  const today=new Date();
+  const dateStr=today.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  const stats={
+    total:tasks.length,
+    todo:tasks.filter(t=>t.status==='À faire').length,
+    inprogress:tasks.filter(t=>t.status==='En cours').length,
+    done:tasks.filter(t=>t.status==='Terminé').length,
+    late:tasks.filter(t=>t.status==='En retard').length,
+  };
+
+  const statCards=[
+    {label:'Total tâches',value:stats.total,icon:'list',grad:GRAD_ACCENT,color:C.violet,bg:'#F3E8FF',trend:'+3 cette semaine'},
+    {label:'À faire',value:stats.todo,icon:'calendar',grad:'linear-gradient(135deg,#0EA5E9,#38BDF8)',color:'#0EA5E9',bg:'#E0F2FE',trend:'+12% cette semaine'},
+    {label:'En cours',value:stats.inprogress,icon:'trend',grad:'linear-gradient(135deg,#F59E0B,#FBBF24)',color:'#F59E0B',bg:'#FEF3C7',progress:Math.round(stats.inprogress/stats.total*100)},
+    {label:'Terminées',value:stats.done,icon:'check',grad:GRAD,color:C.emerald,bg:C.doneBg,trend:'✓ Bien joué !'},
+  ];
+
+  const weekBars=[42,68,55,82,47,90,63];
+  const weekDays=['L','M','M','J','V','S','D'];
+  const lateTasks=tasks.filter(t=>t.status==='En retard');
+  const recentTasks=tasks.slice(0,5);
+
+  return (
+    <div className="fade-in">
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:32}}>
+        <div>
+          <h1 style={{fontSize:30,fontWeight:800,color:C.text,marginBottom:4}}>Bonjour Sarah 👋</h1>
+          <p style={{fontSize:14,color:C.text3,textTransform:'capitalize'}}>{dateStr}</p>
+        </div>
+        <Btn variant="primary" onClick={()=>onNavigate('tasks')} style={{gap:8}}>
+          <Icon name="plus" size={16} color="#fff"/> Nouvelle tâche
+        </Btn>
+      </div>
+
+      {/* Stat Cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:20,marginBottom:32}}>
+        {statCards.map((s,i)=>(
+          <StatCard key={i} {...s}/>
+        ))}
+      </div>
+
+      {/* Late tasks */}
+      {lateTasks.length>0&&(
+        <div style={{background:'#fff',border:`1.5px solid #FECACA`,borderRadius:R,padding:24,marginBottom:24}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+            <span style={{width:32,height:32,borderRadius:10,background:C.lateBg,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <Icon name="alert" size={16} color={C.lateColor}/>
+            </span>
+            <div>
+              <h3 style={{fontSize:15,fontWeight:700,color:'#B91C1C'}}>⚠️ Tâches en retard</h3>
+              <p style={{fontSize:12,color:C.text3}}>{lateTasks.length} tâche{lateTasks.length>1?'s':''} nécessite{lateTasks.length>1?'nt':''} votre attention</p>
+            </div>
+          </div>
+          {lateTasks.map(t=>(
+            <div key={t.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:C.lateBg,borderRadius:10,marginBottom:8,border:`1px solid #FECACA`}}>
+              <Icon name="alert" size={14} color={C.lateColor}/>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600,color:'#991B1B'}}>{t.title}</div>
+                <div style={{fontSize:11,color:C.lateColor}}>Échéance : {new Date(t.due).toLocaleDateString('fr-FR')}</div>
+              </div>
+              <CatBadge cat={t.cat}/>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Bottom grid */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:24}}>
+        {/* Recent tasks */}
+        <div style={{background:'#fff',borderRadius:R,padding:24,boxShadow:SHADOW}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+            <h3 style={{fontSize:16,fontWeight:700,color:C.text}}>📋 Tâches récentes</h3>
+            <button onClick={()=>onNavigate('tasks')} style={{background:'none',border:'none',color:C.emerald,fontSize:12,fontWeight:600,cursor:'pointer'}}>Voir tout →</button>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {recentTasks.map(t=>(
+              <div key={t.id} style={{display:'flex',alignItems:'center',gap:14,padding:'12px',background:C.bg,borderRadius:12,border:`1px solid ${C.border}`}}>
+                <div style={{width:36,height:36,borderRadius:10,background:CATS[t.cat]?.bg||C.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <Icon name="list" size={14} color={CATS[t.cat]?.color||C.emerald}/>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:600,color:C.text,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{t.title}</div>
+                  <div style={{fontSize:11,color:C.text3}}>{t.cat}</div>
+                </div>
+                <Badge status={t.status}/>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Weekly chart */}
+        <div style={{background:'#fff',borderRadius:R,padding:24,boxShadow:SHADOW}}>
+          <h3 style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:4}}>Activité hebdomadaire</h3>
+          <p style={{fontSize:12,color:C.text3,marginBottom:20}}>Tâches complétées cette semaine</p>
+          <div style={{display:'flex',alignItems:'flex-end',gap:10,height:120,padding:'0 4px'}}>
+            {weekBars.map((v,i)=>(
+              <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
+                <div style={{width:'100%',borderRadius:8,background:i===5?GRAD:'linear-gradient(180deg,#D1FAE5,#A7F3D0)',height:`${v}%`,minHeight:8,transition:'height .5s ease'}}/>
+                <span style={{fontSize:10,color:i===5?C.emerald:C.text3,fontWeight:i===5?700:400}}>{weekDays[i]}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:16,padding:'12px',background:C.bg,borderRadius:10,border:`1px solid ${C.border}`}}>
+            <div style={{fontSize:12,color:C.text2}}>Meilleur jour: <strong style={{color:C.emerald}}>Samedi</strong> — 90% accompli</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const StatCard = ({label,value,icon,color,bg,trend,progress,grad}) => {
+  const [hov,setHov]=useState(false);
+  return (
+    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{background:'#fff',borderRadius:R,padding:22,boxShadow:hov?SHADOW_HOVER:SHADOW,
+        transition:'all .2s',transform:hov?'translateY(-2px)':'none',border:`1.5px solid ${C.border}`}}>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:12}}>
+        <div style={{width:42,height:42,borderRadius:12,background:grad,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 4px 12px ${color}33`}}>
+          <Icon name={icon} size={18} color="#fff"/>
+        </div>
+      </div>
+      <div style={{fontSize:36,fontWeight:800,color:C.text,lineHeight:1,marginBottom:4}}>{value}</div>
+      <div style={{fontSize:13,color:C.text2,fontWeight:500,marginBottom:8}}>{label}</div>
+      {trend&&<div style={{fontSize:11,color,fontWeight:600}}>{trend}</div>}
+      {progress!=null&&(
+        <div>
+          <div style={{height:4,background:bg,borderRadius:999,overflow:'hidden'}}>
+            <div style={{height:'100%',width:`${progress}%`,background:GRAD,borderRadius:999,transition:'width 1s ease'}}/>
+          </div>
+          <div style={{fontSize:11,color,fontWeight:600,marginTop:4}}>{progress}% en progression</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════
+// SCREEN 4: TASK LIST
+// ══════════════════════════════
+const TaskListScreen = ({tasks,onEdit,onDelete,onStatusChange,onNewTask}) => {
+  const [filter,setFilter]=useState('Toutes');
+  const [catFilter,setCatFilter]=useState('Toutes');
+  const [search,setSearch]=useState('');
+  const statuses=['Toutes','À faire','En cours','Terminé','En retard'];
+
+  const filtered=tasks.filter(t=>{
+    const matchStatus=filter==='Toutes'||t.status===filter;
+    const matchCat=catFilter==='Toutes'||t.cat===catFilter;
+    const matchSearch=!search||t.title.toLowerCase().includes(search.toLowerCase())||t.desc.toLowerCase().includes(search.toLowerCase());
+    return matchStatus&&matchCat&&matchSearch;
+  });
+
+  const count=(s)=>s==='Toutes'?tasks.length:tasks.filter(t=>t.status===s).length;
+
+  return (
+    <div className="fade-in">
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:28}}>
+        <div>
+          <h1 style={{fontSize:28,fontWeight:800,color:C.text,marginBottom:4}}>Mes tâches</h1>
+          <p style={{fontSize:14,color:C.text3}}>Gérez votre productivité</p>
+        </div>
+        <Btn variant="primary" onClick={onNewTask} style={{gap:8,boxShadow:'0 0 20px rgba(16,185,129,0.35)'}}>
+          <Icon name="plus" size={16} color="#fff"/> Nouvelle tâche
+        </Btn>
+      </div>
+      {/* Filters */}
+      <div style={{background:'#fff',borderRadius:R,padding:'16px 20px',marginBottom:24,boxShadow:SHADOW,border:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          {statuses.map(s=>{
+            const active=filter===s;
+            const cfg=STATUS[s];
+            return (
+              <button key={s} onClick={()=>setFilter(s)}
+                style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:999,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,transition:'all .15s',
+                  background:active?(s==='Toutes'?GRAD:(cfg?.bg||C.bg)):C.bg,
+                  color:active?(s==='Toutes'?'#fff':(cfg?.color||C.text)):C.text2}}>
+                {s}
+                <span style={{padding:'1px 6px',borderRadius:999,background:active&&s!=='Toutes'?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.07)',fontSize:10}}>
+                  {count(s)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{marginLeft:'auto',display:'flex',gap:10,alignItems:'center'}}>
+          <select value={catFilter} onChange={e=>setCatFilter(e.target.value)}
+            style={{padding:'8px 12px',borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:12,color:C.text2,background:'#fff',outline:'none',cursor:'pointer',fontFamily:'Inter'}}>
+            <option value="Toutes">Catégorie : Toutes</option>
+            {Object.keys(CATS).map(c=><option key={c}>{c}</option>)}
+          </select>
+          <div style={{position:'relative'}}>
+            <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)'}}><Icon name="search" size={14} color={C.text3}/></span>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher..."
+              style={{paddingLeft:34,paddingRight:12,paddingTop:8,paddingBottom:8,borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:12,color:C.text,background:C.bg,outline:'none',width:160,fontFamily:'Inter'}}
+              onFocus={e=>e.target.style.borderColor=C.emerald} onBlur={e=>e.target.style.borderColor=C.border}/>
+          </div>
+        </div>
+      </div>
+      {/* Cards grid */}
+      {filtered.length===0?(
+        <EmptyState onNewTask={onNewTask}/>
+      ):(
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}}>
+          {filtered.map(t=><TaskCard key={t.id} task={t} onEdit={onEdit} onDelete={onDelete} onStatusChange={onStatusChange}/>)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const TaskCard = ({task,onEdit,onDelete,onStatusChange}) => {
+  const [hov,setHov]=useState(false);
+  const isLate=task.status==='En retard';
+  const dueDate=new Date(task.due);
+  const dueFmt=dueDate.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+  const createdFmt=new Date(task.created).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+  const [showStatusMenu,setShowStatusMenu]=useState(false);
+
+  return (
+    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>{setHov(false);setShowStatusMenu(false);}}
+      style={{background:'#fff',borderRadius:R,padding:20,boxShadow:hov?SHADOW_HOVER:SHADOW,
+        transition:'all .2s',transform:hov?'translateY(-2px)':'none',border:`1.5px solid ${isLate?'#FECACA':C.border}`,
+        display:'flex',flexDirection:'column',gap:12}}>
+      {/* Top badges */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}}>
+        <CatBadge cat={task.cat}/>
+        <Badge status={task.status}/>
+      </div>
+      {/* Title + desc */}
+      <div>
+        <h3 style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:6,lineHeight:1.4}}>{task.title}</h3>
+        <p style={{fontSize:12,color:C.text3,lineHeight:1.6,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{task.desc}</p>
+      </div>
+      {/* Due date */}
+      <div style={{display:'flex',alignItems:'center',gap:6}}>
+        <Icon name={isLate?'alert':'calendar'} size={13} color={isLate?C.lateColor:C.text3}/>
+        <span style={{fontSize:11,color:isLate?C.lateColor:C.text3,fontWeight:isLate?600:400}}>
+          {isLate&&'⚠️ En retard — '}{dueFmt}
+        </span>
+      </div>
+      <div style={{fontSize:10,color:C.text3}}>Créée le {createdFmt}</div>
+      {/* Actions */}
+      <div style={{display:'flex',alignItems:'center',gap:8,paddingTop:8,borderTop:`1px solid ${C.border}`,marginTop:'auto'}}>
+        <button onClick={()=>onEdit(task)} title="Modifier"
+          style={{display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:8,border:`1.5px solid ${C.border}`,background:hov?C.doneBg:'#fff',color:C.emerald,fontSize:11,fontWeight:600,cursor:'pointer',transition:'all .15s'}}>
+          <Icon name="edit" size={12} color={C.emerald}/> Modifier
+        </button>
+        <button onClick={()=>onDelete(task)} title="Supprimer"
+          style={{display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:8,border:`1.5px solid #FECACA`,background:hov?C.lateBg:'#fff',color:C.lateColor,fontSize:11,fontWeight:600,cursor:'pointer',transition:'all .15s'}}>
+          <Icon name="trash" size={12} color={C.lateColor}/> Supprimer
+        </button>
+        <div style={{position:'relative',marginLeft:'auto'}}>
+          <button onClick={()=>setShowStatusMenu(v=>!v)}
+            style={{padding:'6px 10px',borderRadius:8,border:`1.5px solid ${C.border}`,background:'#fff',color:C.text2,fontSize:11,cursor:'pointer',fontFamily:'Inter'}}>
+            Statut ▾
+          </button>
+          {showStatusMenu&&(
+            <div style={{position:'absolute',right:0,top:'110%',background:'#fff',borderRadius:12,boxShadow:SHADOW_HOVER,border:`1px solid ${C.border}`,zIndex:10,minWidth:130,overflow:'hidden'}}>
+              {Object.keys(STATUS).map(s=>(
+                <button key={s} onClick={()=>{onStatusChange(task.id,s);setShowStatusMenu(false);}}
+                  style={{display:'block',width:'100%',padding:'9px 14px',background:'none',border:'none',cursor:'pointer',textAlign:'left',fontSize:12,color:STATUS[s].color,fontWeight:500,fontFamily:'Inter',
+                    borderBottom:`1px solid ${C.border}`}}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EmptyState = ({onNewTask}) => (
+  <div style={{textAlign:'center',padding:'80px 20px'}}>
+    <div style={{fontSize:64,marginBottom:16}}>🌿</div>
+    <h3 style={{fontSize:20,fontWeight:700,color:C.text,marginBottom:8}}>Aucune tâche trouvée</h3>
+    <p style={{fontSize:14,color:C.text3,marginBottom:24}}>Commencez par créer votre première tâche pour organiser votre journée</p>
+    <Btn variant="primary" onClick={onNewTask}><Icon name="plus" size={16} color="#fff"/> Créer une tâche</Btn>
+  </div>
+);
+
+// ══════════════════════════════
+// TASK FORM MODAL (New & Edit)
+// ══════════════════════════════
+const TaskFormModal = ({mode='new',task,onClose,onSave}) => {
+  const [form,setForm]=useState(task||{title:'',desc:'',cat:'Travail',status:'À faire',due:''});
+  const set=(k)=>(e)=>setForm(f=>({...f,[k]:e.target.value}));
+  const statuses=['À faire','En cours','Terminé'];
+  const isNew=mode==='new';
+
+  return (
+    <Backdrop onClose={onClose}>
+      <div style={{background:'#fff',borderRadius:24,padding:36,width:'100%',maxWidth:520,
+        boxShadow:'0 32px 80px rgba(0,0,0,0.15)',maxHeight:'90vh',overflowY:'auto'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
+          <div>
+            <h2 style={{fontSize:22,fontWeight:800,color:C.text}}>{isNew?'Nouvelle tâche':'Modifier la tâche'}</h2>
+            <p style={{fontSize:13,color:C.text3}}>{isNew?'Ajoutez une nouvelle tâche à votre liste':'Mettez à jour les informations de votre tâche'}</p>
+          </div>
+          <button onClick={onClose} style={{background:C.bg,border:'none',borderRadius:10,width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+            <Icon name="x" size={16} color={C.text2}/>
+          </button>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:18}}>
+          <Input label="Titre de la tâche" value={form.title} onChange={set('title')} placeholder="Ex: Préparer la présentation Q2"/>
+          <div>
+            <label style={{fontSize:13,fontWeight:600,color:C.text,display:'block',marginBottom:6}}>Description</label>
+            <textarea value={form.desc} onChange={set('desc')} placeholder="Décrivez la tâche en détail..."
+              rows={3} style={{width:'100%',padding:'12px 14px',border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:14,color:C.text,outline:'none',resize:'vertical',fontFamily:'Inter',lineHeight:1.6}}
+              onFocus={e=>e.target.style.borderColor=C.emerald} onBlur={e=>e.target.style.borderColor=C.border}/>
+          </div>
+          <div>
+            <label style={{fontSize:13,fontWeight:600,color:C.text,display:'block',marginBottom:6}}>Catégorie</label>
+            <select value={form.cat} onChange={set('cat')}
+              style={{width:'100%',padding:'12px 14px',border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:14,color:C.text,background:'#fff',outline:'none',cursor:'pointer',fontFamily:'Inter'}}
+              onFocus={e=>e.target.style.borderColor=C.emerald} onBlur={e=>e.target.style.borderColor=C.border}>
+              {Object.keys(CATS).map(c=><option key={c}>{c}</option>)}
+            </select>
+            {form.cat&&<div style={{marginTop:8}}><CatBadge cat={form.cat}/></div>}
+          </div>
+          {/* Status pills */}
+          <div>
+            <label style={{fontSize:13,fontWeight:600,color:C.text,display:'block',marginBottom:10}}>Statut initial</label>
+            <div style={{display:'flex',gap:8}}>
+              {statuses.map(s=>{
+                const sel=form.status===s;
+                const cfg=STATUS[s];
+                return (
+                  <button key={s} onClick={()=>setForm(f=>({...f,status:s}))} type="button"
+                    style={{flex:1,padding:'10px',borderRadius:10,border:`2px solid ${sel?cfg.color:C.border}`,
+                      background:sel?cfg.bg:'#fff',color:sel?cfg.color:C.text3,fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}}>
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <label style={{fontSize:13,fontWeight:600,color:C.text,display:'block',marginBottom:6}}>Date d'échéance</label>
+            <input type="date" value={form.due} onChange={set('due')}
+              style={{width:'100%',padding:'12px 14px',border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:14,color:C.text,outline:'none',fontFamily:'Inter'}}
+              onFocus={e=>e.target.style.borderColor=C.emerald} onBlur={e=>e.target.style.borderColor=C.border}/>
+          </div>
+          <div style={{display:'flex',gap:12,marginTop:8}}>
+            <Btn variant="ghost" onClick={onClose} style={{flex:1}}>Annuler</Btn>
+            <Btn variant="primary" onClick={()=>onSave(form)} style={{flex:2}}>
+              {isNew?'Créer la tâche':'Enregistrer les modifications'}
+            </Btn>
+          </div>
+        </div>
+      </div>
+    </Backdrop>
+  );
+};
+
+// ══════════════════════════════
+// SCREEN 7: DELETE MODAL
+// ══════════════════════════════
+const DeleteModal = ({task,onClose,onConfirm}) => (
+  <Backdrop onClose={onClose}>
+    <div style={{background:'#fff',borderRadius:24,padding:36,width:'100%',maxWidth:400,textAlign:'center',
+      boxShadow:'0 32px 80px rgba(0,0,0,0.15)'}}>
+      <div style={{width:64,height:64,borderRadius:'50%',background:C.lateBg,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',
+        animation:'pulse 1.5s ease infinite'}}>
+        <Icon name="alert" size={28} color={C.lateColor}/>
+      </div>
+      <style>{`@keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0.3)}50%{transform:scale(1.05);box-shadow:0 0 0 12px rgba(239,68,68,0)}}`}</style>
+      <h2 style={{fontSize:20,fontWeight:800,color:C.text,marginBottom:8}}>Supprimer cette tâche ?</h2>
+      <p style={{fontSize:13,color:C.text2,lineHeight:1.6,marginBottom:8}}>Cette action est irréversible.</p>
+      <p style={{fontSize:13,color:C.text3,lineHeight:1.6,marginBottom:24}}>La tâche <strong style={{color:C.text}}>"{task?.title}"</strong> sera définitivement supprimée.</p>
+      <div style={{display:'flex',gap:12}}>
+        <Btn variant="ghost" onClick={onClose} style={{flex:1}}>Annuler</Btn>
+        <Btn variant="danger" onClick={onConfirm} style={{flex:1}}>Supprimer</Btn>
+      </div>
+    </div>
+  </Backdrop>
+);
+
+const Backdrop = ({children,onClose}) => (
+  <div onClick={e=>{if(e.target===e.currentTarget)onClose();}}
+    style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',
+      display:'flex',alignItems:'center',justifyContent:'center',zIndex:100,padding:20,animation:'fadeInUp .25s ease'}}>
+    {children}
+  </div>
+);
+
+// ══════════════════════════════
+// SCROLLABLE SCREENS SHOWCASE
+// ══════════════════════════════
+const ShowcaseScreen = ({tasks,setTasks}) => {
+  const [editing,setEditing]=useState(null);
+  const [deleting,setDeleting]=useState(null);
+  const [showNew,setShowNew]=useState(false);
+  const [showEdit,setShowEdit]=useState(false);
+  const [showDel,setShowDel]=useState(false);
+
+  const handleEdit=(task)=>{setEditing(task);setShowEdit(true);};
+  const handleDelete=(task)=>{setDeleting(task);setShowDel(true);};
+  const handleStatusChange=(id,status)=>setTasks(ts=>ts.map(t=>t.id===id?{...t,status}:t));
+  const handleSaveNew=(form)=>{
+    setTasks(ts=>[{...form,id:Date.now(),created:new Date().toISOString().slice(0,10)},...ts]);
+    setShowNew(false);
+  };
+  const handleSaveEdit=(form)=>{
+    setTasks(ts=>ts.map(t=>t.id===editing.id?{...t,...form}:t));
+    setShowEdit(false);setEditing(null);
+  };
+  const handleConfirmDelete=()=>{
+    setTasks(ts=>ts.filter(t=>t.id!==deleting.id));
+    setShowDel(false);setDeleting(null);
+  };
+
+  return (
+    <div className="showcase-wrap" style={{maxWidth:1280,margin:'0 auto',padding:'40px 40px 80px'}}>
+      <div className="showcase-intro" style={{textAlign:'center',marginBottom:48}}>
+        <div style={{display:'inline-flex',alignItems:'center',gap:8,padding:'8px 20px',background:C.doneBg,borderRadius:999,marginBottom:16}}>
+          <span style={{width:8,height:8,borderRadius:'50%',background:C.emerald,display:'inline-block'}}></span>
+          <span style={{fontSize:12,fontWeight:600,color:C.emerald}}>PROTOTYPE INTERACTIF</span>
+        </div>
+        <h1 style={{fontSize:42,fontWeight:800,color:C.text,marginBottom:8,background:GRAD,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>TaskFlow</h1>
+        <p style={{fontSize:16,color:C.text3}}>Interface complète — Palette Fresh Mint</p>
+      </div>
+
+      {/* SCREEN 1: REGISTER */}
+      <div className="print-page">
+        <ScreenLabel label="ÉCRAN 1 — INSCRIPTION"/>
+        <RegisterScreen onNavigate={()=>{}}/>
+      </div>
+
+      <div className="screen-sep"/>
+      {/* SCREEN 2: LOGIN */}
+      <div className="print-page">
+        <ScreenLabel label="ÉCRAN 2 — CONNEXION"/>
+        <LoginScreen onNavigate={()=>{}}/>
+      </div>
+
+      <div className="screen-sep"/>
+      {/* SCREEN 3: DASHBOARD */}
+      <div className="print-page">
+        <ScreenLabel label="ÉCRAN 3 — DASHBOARD"/>
+        <div className="app-wrap" style={{height:'100vh',borderRadius:20,overflow:'hidden',boxShadow:SHADOW_HOVER,border:`1.5px solid ${C.border}`}}>
+          <AppShell activePage="dashboard" onNavigate={()=>{}} onOpenTask={()=>{}}>
+            <DashboardScreen tasks={tasks} onNavigate={()=>{}} onNewTask={()=>setShowNew(true)}/>
+          </AppShell>
+        </div>
+      </div>
+
+      <div className="screen-sep"/>
+      {/* SCREEN 4: TASK LIST */}
+      <div className="print-page">
+        <ScreenLabel label="ÉCRAN 4 — LISTE DES TÂCHES"/>
+        <div className="app-wrap" style={{height:'100vh',borderRadius:20,overflow:'hidden',boxShadow:SHADOW_HOVER,border:`1.5px solid ${C.border}`}}>
+          <AppShell activePage="tasks" onNavigate={()=>{}}>
+            <TaskListScreen tasks={tasks} onEdit={handleEdit} onDelete={handleDelete} onStatusChange={handleStatusChange} onNewTask={()=>setShowNew(true)}/>
+          </AppShell>
+        </div>
+      </div>
+
+      <div className="screen-sep"/>
+      {/* SCREEN 5: NEW TASK MODAL */}
+      <div className="print-page">
+        <ScreenLabel label="ÉCRAN 5 — FORMULAIRE NOUVELLE TÂCHE"/>
+        <div className="modal-wrap" style={{height:700,borderRadius:20,overflow:'hidden',boxShadow:SHADOW_HOVER,border:`1.5px solid ${C.border}`,position:'relative',background:'rgba(0,0,0,0.3)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{position:'absolute',inset:0,background:'linear-gradient(160deg,#ECFDF5,#F0FDF4)',opacity:0.6}}/>
+          <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:520,padding:20}}>
+            <div style={{background:'#fff',borderRadius:24,padding:36,boxShadow:'0 32px 80px rgba(0,0,0,0.15)'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
+                <div>
+                  <h2 style={{fontSize:22,fontWeight:800,color:C.text}}>Nouvelle tâche</h2>
+                  <p style={{fontSize:13,color:C.text3}}>Ajoutez une nouvelle tâche à votre liste</p>
+                </div>
+                <div style={{background:C.bg,borderRadius:10,width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center'}}><Icon name="x" size={16} color={C.text2}/></div>
+              </div>
+              <StaticFormPreview/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="screen-sep"/>
+      {/* SCREEN 6: EDIT TASK MODAL */}
+      <div className="print-page">
+        <ScreenLabel label="ÉCRAN 6 — FORMULAIRE MODIFIER TÂCHE"/>
+        <div className="modal-wrap" style={{height:700,borderRadius:20,overflow:'hidden',boxShadow:SHADOW_HOVER,border:`1.5px solid ${C.border}`,position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{position:'absolute',inset:0,background:'linear-gradient(160deg,#ECFDF5,#F0FDF4)',opacity:0.6}}/>
+          <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:520,padding:20}}>
+            <div style={{background:'#fff',borderRadius:24,padding:36,boxShadow:'0 32px 80px rgba(0,0,0,0.15)'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
+                <div>
+                  <h2 style={{fontSize:22,fontWeight:800,color:C.text}}>Modifier la tâche</h2>
+                  <p style={{fontSize:13,color:C.text3}}>Mettez à jour les informations de votre tâche</p>
+                </div>
+                <div style={{background:C.bg,borderRadius:10,width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center'}}><Icon name="x" size={16} color={C.text2}/></div>
+              </div>
+              <StaticFormPreview prefilled/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="screen-sep"/>
+      {/* SCREEN 7: DELETE MODAL */}
+      <div className="print-page">
+        <ScreenLabel label="ÉCRAN 7 — CONFIRMATION SUPPRESSION"/>
+        <div className="modal-wrap" style={{height:400,borderRadius:20,overflow:'hidden',boxShadow:SHADOW_HOVER,border:`1.5px solid ${C.border}`,position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(160deg,#ECFDF5,#F0FDF4)',opacity:0.6}}/>
+        <div style={{position:'relative',zIndex:1,background:'#fff',borderRadius:24,padding:36,width:360,textAlign:'center',boxShadow:'0 32px 80px rgba(0,0,0,0.15)'}}>
+          <div style={{width:64,height:64,borderRadius:'50%',background:C.lateBg,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',animation:'alertPulse 1.5s ease infinite'}}>
+            <Icon name="alert" size={28} color={C.lateColor}/>
+          </div>
+          <style>{`@keyframes alertPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.3)}50%{box-shadow:0 0 0 14px rgba(239,68,68,0)}}`}</style>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.text,marginBottom:8}}>Supprimer cette tâche ?</h2>
+          <p style={{fontSize:13,color:C.text2,lineHeight:1.6,marginBottom:8}}>Cette action est irréversible.</p>
+          <p style={{fontSize:13,color:C.text3,lineHeight:1.6,marginBottom:24}}>La tâche <strong style={{color:C.text}}>"Réviser le contrat fournisseur"</strong> sera définitivement supprimée.</p>
+          <div style={{display:'flex',gap:12}}>
+            <div style={{flex:1,padding:'12px',borderRadius:12,border:`1.5px solid #E5E7EB`,background:'#fff',color:C.text2,fontSize:14,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>Annuler</div>
+            <div style={{flex:1,padding:'12px',borderRadius:12,background:'#EF4444',color:'#fff',fontSize:14,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>Supprimer</div>
+          </div>
+        </div>
+      </div>
+
+      </div>{/* end screen 7 print-page */}
+
+      {/* Interactive modals */}
+      {showNew&&<TaskFormModal mode="new" onClose={()=>setShowNew(false)} onSave={handleSaveNew}/>}
+      {showEdit&&editing&&<TaskFormModal mode="edit" task={editing} onClose={()=>{setShowEdit(false);setEditing(null);}} onSave={handleSaveEdit}/>}
+      {showDel&&deleting&&<DeleteModal task={deleting} onClose={()=>{setShowDel(false);setDeleting(null);}} onConfirm={handleConfirmDelete}/>}
+    </div>
+  );
+};
+
+const StaticFormPreview = ({prefilled}) => {
+  const statuses=['À faire','En cours','Terminé'];
+  const [sel,setSel]=useState(prefilled?'En cours':'À faire');
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:16}}>
+      <div>
+        <label style={{fontSize:13,fontWeight:600,color:C.text,display:'block',marginBottom:6}}>Titre de la tâche</label>
+        <input defaultValue={prefilled?'Préparer la présentation Q2':''} placeholder={prefilled?'':'Ex: Préparer la présentation Q2'}
+          style={{width:'100%',padding:'12px 14px',border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:14,color:C.text,outline:'none',fontFamily:'Inter'}}/>
+      </div>
+      <div>
+        <label style={{fontSize:13,fontWeight:600,color:C.text,display:'block',marginBottom:6}}>Description</label>
+        <textarea rows={2} defaultValue={prefilled?'Slides pour le board meeting du vendredi.'  :''}
+          style={{width:'100%',padding:'12px 14px',border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:14,color:C.text,outline:'none',resize:'none',fontFamily:'Inter'}}/>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <div>
+          <label style={{fontSize:13,fontWeight:600,color:C.text,display:'block',marginBottom:6}}>Catégorie</label>
+          <select defaultValue={prefilled?'Travail':'Travail'} style={{width:'100%',padding:'11px 14px',border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:13,color:C.text,background:'#fff',outline:'none',fontFamily:'Inter'}}>
+            {Object.keys(CATS).map(c=><option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{fontSize:13,fontWeight:600,color:C.text,display:'block',marginBottom:6}}>Date d'échéance</label>
+          <input type="date" defaultValue={prefilled?'2026-04-28':''} style={{width:'100%',padding:'11px 14px',border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:13,color:C.text,outline:'none',fontFamily:'Inter'}}/>
+        </div>
+      </div>
+      <div>
+        <label style={{fontSize:13,fontWeight:600,color:C.text,display:'block',marginBottom:8}}>Statut</label>
+        <div style={{display:'flex',gap:8}}>
+          {statuses.map(s=>{const active=sel===s;const cfg=STATUS[s];return(
+            <button key={s} onClick={()=>setSel(s)} type="button"
+              style={{flex:1,padding:'9px',borderRadius:10,border:`2px solid ${active?cfg.color:C.border}`,
+                background:active?cfg.bg:'#fff',color:active?cfg.color:C.text3,fontSize:12,fontWeight:600,cursor:'pointer'}}>
+              {s}
+            </button>
+          );})}
+        </div>
+      </div>
+      <div style={{display:'flex',gap:12,marginTop:4}}>
+        <div style={{flex:1,padding:'12px',borderRadius:12,border:'1.5px solid #E5E7EB',textAlign:'center',color:C.text2,fontSize:14,fontWeight:600,cursor:'pointer'}}>Annuler</div>
+        <div style={{flex:2,padding:'12px',borderRadius:12,background:GRAD,textAlign:'center',color:'#fff',fontSize:14,fontWeight:600,cursor:'pointer',boxShadow:'0 0 18px rgba(16,185,129,0.3)'}}>
+          {prefilled?'Enregistrer les modifications':'Créer la tâche'}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════
+// ROOT APP
+// ══════════════════════════════
+const App = () => {
+  const [tasks,setTasks]=useState(INITIAL_TASKS);
+  return <ShowcaseScreen tasks={tasks} setTasks={setTasks}/>;
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+// Auto-print: wait for fonts + React render + small buffer
+document.fonts.ready.then(() => {
+  setTimeout(() => { window.print(); }, 800);
+});
+</script>
+</body>
+</html>
