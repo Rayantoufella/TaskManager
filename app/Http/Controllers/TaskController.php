@@ -39,7 +39,7 @@ class TaskController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'title'       => 'required|string|max:25',
+            'title'       => 'required|string',
             'description' => 'nullable|string',
             'category_id' => 'required|exists:categories,id',
             'status'      => 'nullable|in:todo,in_progress,done',
@@ -85,9 +85,9 @@ class TaskController extends Controller
 
         $task = Task::findOrFail($id);
 
-        /*if($task->user_id !== Auth::id()){
+        if($task->user_id !== Auth::id()){
             abort(403);
-        }*/
+        }
 
         $categories = Category::all();
 
@@ -102,13 +102,13 @@ class TaskController extends Controller
     {
         $task = Task::findOrFail($id);
 
-        /*if ($task->user_id !== Auth::id()) {
+        if ($task->user_id !== Auth::id()) {
             abort(403);
-        }*/
+        }
 
             
         $data = $request->validate([
-            'title'       => 'required|string|max:25',
+            'title'       => 'required|string',
             'description' => 'nullable|string',
             'category_id' => 'required|exists:categories,id',
             'status'      => 'nullable|in:todo,in_progress,done',

@@ -564,7 +564,7 @@
 
                 <div>
                     <label class="form-label" for="c_title">Titre de la tâche</label>
-                    <input id="c_title" type="text" name="title" maxlength="25" required
+                    <input id="c_title" type="text" name="title" required
                            class="form-input"
                            placeholder="Ex: Préparer la présentation Q2"
                            value="{{ $oldModal === 'create' ? old('title') : '' }}">
@@ -637,7 +637,7 @@
 
                 <div>
                     <label class="form-label" for="e_title">Titre de la tâche</label>
-                    <input id="e_title" type="text" name="title" maxlength="25" required
+                    <input id="e_title" type="text" name="title" required
                            class="form-input"
                            placeholder="Ex: Préparer la présentation Q2"
                            value="{{ $oldModal === 'edit' ? old('title') : '' }}">

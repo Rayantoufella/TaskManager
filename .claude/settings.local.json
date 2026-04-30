@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Read(//c/tmp/**)",
+      "Bash(cp \"C:/Users/hp/.claude/projects/c--laragon-www-Task-Manager/b944c0ea-09ed-4d02-b692-fbe12d4bb930/tool-results/webfetch-1777471856356-h4zbon.bin\" design.tar.gz)",
+      "Bash(mkdir -p design_extract)",
+      "Bash(tar -tzf design.tar.gz)",
+      "Bash(tar -xzf design.tar.gz -C design_extract)",
+      "Read(//tmp/design_extract/task-manager-remix/**)",
+      "Read(//c/tmp/design_extract/task-manager-remix/**)",
+      "Read(//tmp/design_extract/task-manager-remix/project/**)",
+      "Read(//c/tmp/design_extract/task-manager-remix/project/**)"
+    ]
+  }
+}
